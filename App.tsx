@@ -1,11 +1,10 @@
-
 import React, { useState, useRef, useEffect } from 'react';
-import { Clue, Message, AgentResponse } from './types.ts';
-import { INITIAL_CASE } from './constants.ts';
-import { getDetectiveResponse, generateClueVisual } from './services/geminiService.ts';
-import ClueBoard from './components/ClueBoard.tsx';
-import ClueDetail from './components/ClueDetail.tsx';
-import SaveModal from './components/SaveModal.tsx';
+import { Clue, Message, AgentResponse } from './types';
+import { INITIAL_CASE } from './constants';
+import { getDetectiveResponse, generateClueVisual } from './services/geminiService';
+import ClueBoard from './components/ClueBoard';
+import ClueDetail from './components/ClueDetail';
+import SaveModal from './components/SaveModal';
 
 const App: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -17,6 +16,7 @@ const App: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'save' | 'load'>('save');
   const [caseContext] = useState(INITIAL_CASE.initialContext);
+  const [showBriefing, setShowBriefing] = useState(true);
   
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -26,7 +26,7 @@ const App: React.FC = () => {
       const intro: Message = {
         id: 'intro',
         role: 'assistant',
-        text: "雨下得真大，侦探。斯威顿庄园的人都各怀鬼胎。我是你的助手。现场已经封锁了，但在那些上流社会的秘密发酵前，我们得赶紧行动。你打算先从哪儿查起？",
+        text: "雨打在窗台上，声音像是一群不耐烦的催债人。庄园里的空气冷得能冻住人的骨髓。我是老刘，你的助手。案发现场已经清理得差不多了，但真正的线索往往藏在人心缝隙里。侦探，我们要从哪一页档案开始翻起？",
         timestamp: Date.now()
       };
       setMessages([intro]);
@@ -61,6 +61,7 @@ const App: React.FC = () => {
       setMessages(savedMessages);
       setClues(savedClues);
       setSaveStatus(`成功调取第 ${slotIndex} 号档案`);
+      setShowBriefing(false);
       setModalOpen(false);
       setTimeout(() => setSaveStatus(null), 3000);
     } catch (e) {
@@ -84,7 +85,7 @@ const App: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const history = messages.slice(-6).map(m => ({
+      const history = messages.slice(-10).map(m => ({
         role: m.role === 'user' ? 'user' as const : 'model' as const,
         parts: [{ text: m.text }]
       }));
@@ -127,9 +128,49 @@ const App: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-slate-950 text-slate-200 selection:bg-amber-500/30">
+      {/* 沉浸式开场简报 */}
+      {showBriefing && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-xl p-6">
+          <div className="max-w-3xl w-full bg-[#1a1a1a] p-10 border border-amber-900/30 shadow-[0_0_50px_rgba(0,0,0,1)] relative overflow-hidden animate-fade-in">
+            <div className="absolute top-0 left-0 w-full h-1 bg-amber-600 shadow-[0_0_10px_rgba(217,119,6,0.5)]"></div>
+            <div className="flex justify-between items-start mb-8 border-b border-amber-900/20 pb-4">
+              <div>
+                <h2 className="typewriter-font text-3xl font-bold text-amber-600 tracking-tighter uppercase">侦探简报：{INITIAL_CASE.title}</h2>
+                <p className="text-[10px] text-slate-500 uppercase tracking-[0.3em] font-bold mt-1">案卷编号 47-11-14 | 机密</p>
+              </div>
+              <div className="text-right">
+                <p className="typewriter-font text-slate-500 text-xs">地点: {INITIAL_CASE.location}</p>
+                <p className="typewriter-font text-slate-500 text-xs">状态: 调查进行中</p>
+              </div>
+            </div>
+            
+            <div className="prose prose-invert max-w-none mb-10">
+              <p className="typewriter-font text-slate-300 leading-relaxed italic whitespace-pre-wrap text-lg">
+                {caseContext}
+              </p>
+            </div>
+
+            <div className="flex justify-center">
+              <button 
+                onClick={() => setShowBriefing(false)}
+                className="group relative px-12 py-4 bg-amber-700 hover:bg-amber-600 text-white font-bold rounded-sm transition-all shadow-[0_5px_15px_rgba(0,0,0,0.3)] hover:shadow-amber-900/40 active:translate-y-1"
+              >
+                <span className="relative z-10 typewriter-font tracking-widest">接受委托</span>
+                <div className="absolute inset-0 border border-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              </button>
+            </div>
+            
+            <div className="mt-8 pt-4 border-t border-amber-900/10 flex justify-between items-center opacity-30">
+               <span className="text-[10px] typewriter-font uppercase">局长签名: ________________</span>
+               <span className="text-[10px] typewriter-font uppercase">日期: 1947.11.14</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className="bg-slate-900 border-b border-slate-800 px-6 py-4 flex flex-wrap justify-between items-center shadow-2xl z-20">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-slate-800 border border-amber-900/50 rounded flex items-center justify-center shadow-lg">
+          <div className="w-10 h-10 bg-slate-800 border border-amber-900/50 rounded flex items-center justify-center shadow-lg cursor-help" onClick={() => setShowBriefing(true)}>
             <span className="text-2xl filter contrast-125 grayscale">🕵️</span>
           </div>
           <div>
@@ -144,18 +185,18 @@ const App: React.FC = () => {
               onClick={() => { setModalMode('save'); setModalOpen(true); }}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-400 hover:text-amber-400 hover:bg-slate-800 rounded transition-all"
             >
-              <span>💾</span> 保存
+              <span>💾</span> 存盘
             </button>
             <button 
               onClick={() => { setModalMode('load'); setModalOpen(true); }}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-400 hover:text-amber-400 hover:bg-slate-800 rounded transition-all"
             >
-              <span>📂</span> 读取
+              <span>📂</span> 调档
             </button>
           </div>
-          <div className="flex items-center bg-slate-800/30 px-3 py-1.5 rounded-full border border-slate-700">
-            <span className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse mr-2"></span>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">正在调查</span>
+          <div className="flex items-center bg-amber-900/10 px-3 py-1.5 rounded-full border border-amber-900/20">
+            <span className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse mr-2 shadow-[0_0_5px_rgba(245,158,11,0.5)]"></span>
+            <span className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">正在调查</span>
           </div>
         </div>
       </header>
@@ -167,31 +208,27 @@ const App: React.FC = () => {
       )}
 
       <div className="flex flex-1 overflow-hidden relative">
-        <div className="flex-1 flex flex-col relative bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]">
-          <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-8 scroll-smooth">
-            {/* 案情背景卡片 */}
-            <div className="bg-slate-900/90 border-l-4 border-amber-600 p-8 rounded-r-lg shadow-2xl max-w-4xl mx-auto mb-12 animate-fade-in">
-              <div className="flex items-center gap-3 mb-6 opacity-80">
-                 <div className="h-[2px] flex-1 bg-amber-900/30"></div>
-                 <span className="text-amber-500 font-bold typewriter-font text-lg tracking-widest uppercase">绝密案卷：{INITIAL_CASE.title}</span>
-                 <div className="h-[2px] flex-1 bg-amber-900/30"></div>
-              </div>
-              <p className="typewriter-font text-slate-300 leading-relaxed text-base italic whitespace-pre-wrap first-letter:text-4xl first-letter:font-bold first-letter:text-amber-500 first-letter:mr-2 first-letter:float-left">
-                {caseContext}
-              </p>
-            </div>
-
+        <div className="flex-1 flex flex-col relative bg-slate-950">
+          {/* 背景暗角效果 */}
+          <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.4)_100%)] z-10"></div>
+          
+          <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth z-0 custom-scrollbar">
             {messages.map((msg) => (
               <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
-                <div className={`max-w-[85%] md:max-w-[70%] p-5 rounded-2xl shadow-xl ${
+                <div className={`max-w-[85%] md:max-w-[75%] p-5 rounded-sm shadow-xl relative ${
                   msg.role === 'user' 
-                  ? 'bg-amber-700/80 text-white rounded-tr-none border border-amber-600/50' 
-                  : 'bg-slate-900 border border-slate-800 text-slate-200 rounded-tl-none typewriter-font'
+                  ? 'bg-amber-800/20 text-slate-200 border-r-4 border-amber-600' 
+                  : 'bg-slate-900/80 border-l-4 border-slate-700 text-slate-300 typewriter-font'
                 }`}>
-                  <p className="text-[15px] leading-relaxed">{msg.text}</p>
-                  <div className="flex justify-between items-center mt-3 opacity-40 border-t border-white/10 pt-2">
-                    <span className="text-[9px] uppercase font-bold tracking-tighter">{msg.role === 'user' ? '侦探' : '助手'}</span>
-                    <span className="text-[9px]">{new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                  {/* 角色标识 */}
+                  <div className={`text-[9px] uppercase font-black tracking-widest mb-2 opacity-30 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
+                    {msg.role === 'user' ? '侦探本人' : '助手 老刘'}
+                  </div>
+                  
+                  <p className="text-[16px] leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                  
+                  <div className="flex justify-end mt-3 opacity-20 pt-2 text-[8px]">
+                    <span>{new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                   </div>
                 </div>
               </div>
@@ -199,31 +236,33 @@ const App: React.FC = () => {
             
             {isLoading && (
               <div className="flex justify-start">
-                <div className="bg-slate-900/50 border border-slate-800 p-4 rounded-2xl rounded-tl-none flex items-center gap-4">
+                <div className="bg-slate-900/40 border-l-4 border-amber-700 p-4 rounded-sm flex items-center gap-4">
                    <div className="flex gap-1.5">
-                      <div className="w-2 h-2 bg-amber-500 rounded-full animate-bounce"></div>
-                      <div className="w-2 h-2 bg-amber-500 rounded-full animate-bounce [animation-delay:0.2s]"></div>
-                      <div className="w-2 h-2 bg-amber-500 rounded-full animate-bounce [animation-delay:0.4s]"></div>
+                      <div className="w-1.5 h-1.5 bg-amber-600 rounded-full animate-bounce"></div>
+                      <div className="w-1.5 h-1.5 bg-amber-600 rounded-full animate-bounce [animation-delay:0.2s]"></div>
+                      <div className="w-1.5 h-1.5 bg-amber-600 rounded-full animate-bounce [animation-delay:0.4s]"></div>
                    </div>
-                   <p className="text-[10px] text-slate-500 uppercase font-bold tracking-[0.2em]">正在整理线索...</p>
+                   <p className="text-[10px] text-amber-700 uppercase font-bold tracking-[0.3em]">老刘正在翻阅卷宗...</p>
                 </div>
               </div>
             )}
           </div>
 
-          <div className="p-6 bg-slate-900/95 border-t border-slate-800 backdrop-blur-xl z-10">
-            <form onSubmit={handleSendMessage} className="max-w-5xl mx-auto flex gap-4">
-              <input
-                type="text"
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                placeholder="向助手下达指令，例如：“带我去书房看看” 或 “询问管家当时的细节”..."
-                className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-6 py-4 text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-600/50 transition-all placeholder:text-slate-600 text-sm"
-              />
+          <div className="p-6 bg-slate-900 border-t border-slate-800 z-20">
+            <form onSubmit={handleSendMessage} className="max-w-4xl mx-auto flex gap-3">
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  placeholder="输入指令... (例如：检查酒杯、盘问遗孀、搜索书架)"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-sm px-6 py-4 text-slate-200 focus:outline-none focus:border-amber-700/50 transition-all placeholder:text-slate-700 text-sm typewriter-font"
+                />
+              </div>
               <button
                 type="submit"
                 disabled={isLoading || !inputText.trim()}
-                className="bg-amber-600 hover:bg-amber-500 disabled:bg-slate-800 disabled:text-slate-600 text-white px-10 py-4 rounded-xl font-bold shadow-lg transition-all active:scale-95 flex items-center gap-2"
+                className="bg-amber-700 hover:bg-amber-600 disabled:bg-slate-800 disabled:text-slate-600 text-white px-8 py-4 rounded-sm font-bold shadow-lg transition-all active:translate-y-1 flex items-center gap-2 typewriter-font uppercase tracking-widest"
               >
                 {isLoading ? '调查中' : '行动'}
               </button>
@@ -231,7 +270,7 @@ const App: React.FC = () => {
           </div>
         </div>
         
-        <aside className="w-96 hidden lg:block border-l border-slate-800 shadow-2xl z-10">
+        <aside className="w-96 hidden lg:block border-l border-slate-800 shadow-[0_0_30px_rgba(0,0,0,0.5)] z-20">
           <ClueBoard clues={clues} onSelectClue={setSelectedClue} />
         </aside>
       </div>
@@ -244,6 +283,22 @@ const App: React.FC = () => {
         onClose={() => setModalOpen(false)} 
         onSelectSlot={modalMode === 'save' ? onSaveToSlot : onLoadFromSlot}
       />
+
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: #020617;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #1e293b;
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #334155;
+        }
+      `}</style>
     </div>
   );
 };

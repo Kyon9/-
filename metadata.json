@@ -1,7 +1,7 @@
 {
-  "name": "Detective Noir: AI Mystery Solver",
-  "description": "An immersive detective role-playing game where you solve complex murder mysteries with the help of an AI assistant. Collect evidence, examine maps, and generate visual clues using Gemini.",
+  "name": "黑色侦探：AI 探案助手",
+  "description": "沉浸式黑色电影风格侦探RPG。与AI助手合作，收集线索，破解斯威顿庄园的密室谋杀案。",
   "requestFramePermissions": [
-    "camera"
+    "microphone"
   ]
 }
