@@ -1,11 +1,11 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Clue, Message, AgentResponse } from './types';
-import { INITIAL_CASE } from './constants';
-import { getDetectiveResponse, generateClueVisual } from './services/geminiService';
-import ClueBoard from './components/ClueBoard';
-import ClueDetail from './components/ClueDetail';
-import SaveModal from './components/SaveModal';
+import { Clue, Message, AgentResponse } from './types.ts';
+import { INITIAL_CASE } from './constants.ts';
+import { getDetectiveResponse, generateClueVisual } from './services/geminiService.ts';
+import ClueBoard from './components/ClueBoard.tsx';
+import ClueDetail from './components/ClueDetail.tsx';
+import SaveModal from './components/SaveModal.tsx';
 
 const App: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -19,6 +19,19 @@ const App: React.FC = () => {
   const [caseContext] = useState(INITIAL_CASE.initialContext);
   
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // 初始化开场白
+  useEffect(() => {
+    if (messages.length === 0) {
+      const intro: Message = {
+        id: 'intro',
+        role: 'assistant',
+        text: "雨下得真大，侦探。斯威顿庄园的人都各怀鬼胎。我是你的助手。现场已经封锁了，但在那些上流社会的秘密发酵前，我们得赶紧行动。你打算先从哪儿查起？",
+        timestamp: Date.now()
+      };
+      setMessages([intro]);
+    }
+  }, []);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -113,97 +126,114 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-slate-950 text-slate-200">
-      <header className="bg-slate-900 border-b border-slate-800 px-6 py-4 flex flex-wrap justify-between items-center shadow-lg z-10">
+    <div className="flex flex-col h-screen overflow-hidden bg-slate-950 text-slate-200 selection:bg-amber-500/30">
+      <header className="bg-slate-900 border-b border-slate-800 px-6 py-4 flex flex-wrap justify-between items-center shadow-2xl z-20">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-amber-600 rounded flex items-center justify-center shadow-inner">
-            <span className="text-2xl">🕵️</span>
+          <div className="w-10 h-10 bg-slate-800 border border-amber-900/50 rounded flex items-center justify-center shadow-lg">
+            <span className="text-2xl filter contrast-125 grayscale">🕵️</span>
           </div>
           <div>
-            <h1 className="text-xl font-bold typewriter-font tracking-tight text-amber-500">黑色侦探</h1>
-            <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] font-bold">案件：{INITIAL_CASE.title}</p>
+            <h1 className="text-xl font-bold typewriter-font tracking-tight text-amber-500">黑色侦探：AI 探案助手</h1>
+            <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] font-bold">档案编号：{INITIAL_CASE.id}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 mt-2 sm:mt-0">
-          <div className="flex bg-slate-800 rounded-lg p-1 border border-slate-700 mr-4">
+        <div className="flex items-center gap-4 mt-2 sm:mt-0">
+          <div className="flex bg-slate-950/50 rounded-lg p-1 border border-slate-800">
             <button 
               onClick={() => { setModalMode('save'); setModalOpen(true); }}
-              className="flex items-center gap-1.5 px-3 py-1 text-xs font-bold text-slate-300 hover:text-amber-400 hover:bg-slate-700 rounded transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-400 hover:text-amber-400 hover:bg-slate-800 rounded transition-all"
             >
               <span>💾</span> 保存
             </button>
-            <div className="w-[1px] bg-slate-700 mx-1"></div>
             <button 
               onClick={() => { setModalMode('load'); setModalOpen(true); }}
-              className="flex items-center gap-1.5 px-3 py-1 text-xs font-bold text-slate-300 hover:text-amber-400 hover:bg-slate-700 rounded transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-400 hover:text-amber-400 hover:bg-slate-800 rounded transition-all"
             >
               <span>📂</span> 读取
             </button>
           </div>
-          <div className="text-right hidden md:block mr-4">
-            <p className="text-xs text-slate-400 font-semibold">案发地点</p>
-            <p className="text-xs text-slate-500">{INITIAL_CASE.location}</p>
-          </div>
-          <div className="flex items-center">
-            <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse mr-2"></span>
-            <span className="text-[10px] font-bold text-slate-400 uppercase">系统在线</span>
+          <div className="flex items-center bg-slate-800/30 px-3 py-1.5 rounded-full border border-slate-700">
+            <span className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse mr-2"></span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">正在调查</span>
           </div>
         </div>
       </header>
 
       {saveStatus && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[60] bg-amber-600 text-white px-6 py-2 rounded-full shadow-2xl typewriter-font text-sm animate-fade-in-down border border-white/20">
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[60] bg-amber-600 text-white px-6 py-2 rounded-full shadow-2xl typewriter-font text-sm animate-fade-in border border-white/20">
           {saveStatus}
         </div>
       )}
 
-      <div className="flex flex-1 overflow-hidden">
-        <div className="flex-1 flex flex-col relative bg-[url('https://www.transparenttextures.com/patterns/dark-leather.png')]">
-          <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6">
-            <div className="bg-slate-900/80 border border-amber-900/30 p-6 rounded-lg shadow-xl max-w-3xl mx-auto mb-10">
-              <div className="flex items-center gap-2 mb-4 border-b border-amber-900/20 pb-2">
-                 <span className="text-amber-600 font-bold typewriter-font text-lg">官方结案报告/案卷</span>
+      <div className="flex flex-1 overflow-hidden relative">
+        <div className="flex-1 flex flex-col relative bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]">
+          <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-8 scroll-smooth">
+            {/* 案情背景卡片 */}
+            <div className="bg-slate-900/90 border-l-4 border-amber-600 p-8 rounded-r-lg shadow-2xl max-w-4xl mx-auto mb-12 animate-fade-in">
+              <div className="flex items-center gap-3 mb-6 opacity-80">
+                 <div className="h-[2px] flex-1 bg-amber-900/30"></div>
+                 <span className="text-amber-500 font-bold typewriter-font text-lg tracking-widest uppercase">绝密案卷：{INITIAL_CASE.title}</span>
+                 <div className="h-[2px] flex-1 bg-amber-900/30"></div>
               </div>
-              <p className="typewriter-font text-slate-300 leading-relaxed text-sm whitespace-pre-wrap">{caseContext}</p>
+              <p className="typewriter-font text-slate-300 leading-relaxed text-base italic whitespace-pre-wrap first-letter:text-4xl first-letter:font-bold first-letter:text-amber-500 first-letter:mr-2 first-letter:float-left">
+                {caseContext}
+              </p>
             </div>
+
             {messages.map((msg) => (
-              <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[80%] p-4 rounded-2xl shadow-md ${msg.role === 'user' ? 'bg-amber-700 text-white rounded-tr-none' : 'bg-slate-800 border border-slate-700 text-slate-200 rounded-tl-none typewriter-font'}`}>
-                  <p className="text-sm leading-relaxed">{msg.text}</p>
-                  <span className="text-[10px] opacity-50 mt-2 block">{new Date(msg.timestamp).toLocaleTimeString()}</span>
+              <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
+                <div className={`max-w-[85%] md:max-w-[70%] p-5 rounded-2xl shadow-xl ${
+                  msg.role === 'user' 
+                  ? 'bg-amber-700/80 text-white rounded-tr-none border border-amber-600/50' 
+                  : 'bg-slate-900 border border-slate-800 text-slate-200 rounded-tl-none typewriter-font'
+                }`}>
+                  <p className="text-[15px] leading-relaxed">{msg.text}</p>
+                  <div className="flex justify-between items-center mt-3 opacity-40 border-t border-white/10 pt-2">
+                    <span className="text-[9px] uppercase font-bold tracking-tighter">{msg.role === 'user' ? '侦探' : '助手'}</span>
+                    <span className="text-[9px]">{new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                  </div>
                 </div>
               </div>
             ))}
+            
             {isLoading && (
-              <div className="flex justify-start animate-pulse">
-                <div className="bg-slate-800 border border-slate-700 p-4 rounded-2xl rounded-tl-none flex flex-col gap-2">
-                   <div className="flex gap-1"><div className="w-2 h-2 bg-slate-500 rounded-full"></div><div className="w-2 h-2 bg-slate-500 rounded-full delay-75"></div><div className="w-2 h-2 bg-slate-500 rounded-full delay-150"></div></div>
-                   <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">分析中...</p>
+              <div className="flex justify-start">
+                <div className="bg-slate-900/50 border border-slate-800 p-4 rounded-2xl rounded-tl-none flex items-center gap-4">
+                   <div className="flex gap-1.5">
+                      <div className="w-2 h-2 bg-amber-500 rounded-full animate-bounce"></div>
+                      <div className="w-2 h-2 bg-amber-500 rounded-full animate-bounce [animation-delay:0.2s]"></div>
+                      <div className="w-2 h-2 bg-amber-500 rounded-full animate-bounce [animation-delay:0.4s]"></div>
+                   </div>
+                   <p className="text-[10px] text-slate-500 uppercase font-bold tracking-[0.2em]">正在整理线索...</p>
                 </div>
               </div>
             )}
           </div>
-          <div className="p-4 bg-slate-900/90 border-t border-slate-800 backdrop-blur-md">
-            <form onSubmit={handleSendMessage} className="max-w-4xl mx-auto flex gap-3">
+
+          <div className="p-6 bg-slate-900/95 border-t border-slate-800 backdrop-blur-xl z-10">
+            <form onSubmit={handleSendMessage} className="max-w-5xl mx-auto flex gap-4">
               <input
                 type="text"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                placeholder="向助手提问，或指示我去调查现场..."
-                className="flex-1 bg-slate-800 border border-slate-700 rounded-full px-6 py-3 text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-600 transition-all placeholder:text-slate-500"
+                placeholder="向助手下达指令，例如：“带我去书房看看” 或 “询问管家当时的细节”..."
+                className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-6 py-4 text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-600/50 transition-all placeholder:text-slate-600 text-sm"
               />
               <button
                 type="submit"
                 disabled={isLoading || !inputText.trim()}
-                className="bg-amber-600 hover:bg-amber-500 disabled:bg-slate-700 text-white px-8 py-3 rounded-full font-bold shadow-lg transition-all"
+                className="bg-amber-600 hover:bg-amber-500 disabled:bg-slate-800 disabled:text-slate-600 text-white px-10 py-4 rounded-xl font-bold shadow-lg transition-all active:scale-95 flex items-center gap-2"
               >
-                {isLoading ? '调查中' : '发送'}
+                {isLoading ? '调查中' : '行动'}
               </button>
             </form>
           </div>
         </div>
-        <aside className="w-80 hidden lg:block"><ClueBoard clues={clues} onSelectClue={setSelectedClue} /></aside>
+        
+        <aside className="w-96 hidden lg:block border-l border-slate-800 shadow-2xl z-10">
+          <ClueBoard clues={clues} onSelectClue={setSelectedClue} />
+        </aside>
       </div>
 
       <ClueDetail clue={selectedClue} onClose={() => setSelectedClue(null)} />

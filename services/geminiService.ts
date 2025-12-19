@@ -1,15 +1,14 @@
 
 import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
-import { AgentResponse, ClueType } from "../types";
+import { AgentResponse, ClueType } from "../types.ts";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 const SYSTEM_INSTRUCTION = `你是一位黑色电影（Noir）风格的专业调查助手。
-用户是首席侦探。
-你的目标是通过回答问题、提供推理以及根据提供的案情文件进行“虚拟调查”来协助侦探。
+用户是首席侦探，你正在协助他破解一起复杂的推理小说式案件。
 
 重要准则：
-1. 始终保持角色状态。使用略显正式、冷峻但专业的侦探助手口吻。必须使用中文交流。
+1. 始终保持角色状态。你的台词应该像冷硬派小说。必须使用中文交流。
 2. 当侦探要求你“调查”某处，或在交谈中发现重要证据时，你必须建议一个新的线索（Clue）。
 3. 你的所有回复必须是严格的 JSON 格式。
 4. 如果发现需要视觉呈现的线索（如实物、现场照片、平面图），将 'type' 设为 'image' 或 'map'，并提供详细的英文描述作为 'contentPrompt' 以供图片生成。
@@ -17,7 +16,7 @@ const SYSTEM_INSTRUCTION = `你是一位黑色电影（Noir）风格的专业调
 
 回复模式（JSON）：
 {
-  "message": "你对侦探说的话",
+  "message": "你对侦探说的话。如果这是开场，请表现得像刚刚递上一根烟并开始汇报。",
   "newClues": [
     {
       "title": "线索标题",
@@ -73,7 +72,7 @@ export const getDetectiveResponse = async (
     return JSON.parse(response.text || '{}');
   } catch (error) {
     console.error("Gemini Text Error:", error);
-    return { message: "抱歉，侦探。档案库的连接有些问题。你能再说一遍吗？" };
+    return { message: "抱歉，侦探。信号不太好，档案库的连接好像断了。你能再说一遍吗？" };
   }
 };
 
@@ -82,7 +81,7 @@ export const generateClueVisual = async (prompt: string): Promise<string | null>
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: {
-        parts: [{ text: `A gritty, high-contrast, noir-style cinematic photo of: ${prompt}. Cinematic lighting, 35mm film grain, 1940s vintage aesthetic, realistic.` }]
+        parts: [{ text: `A gritty, high-contrast, noir-style cinematic photo of: ${prompt}. Cinematic lighting, heavy shadows, 1940s vintage aesthetic, photorealistic.` }]
       },
       config: {
         imageConfig: { aspectRatio: "1:1" }
