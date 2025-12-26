@@ -5,40 +5,31 @@ import { AgentResponse } from "../types";
 const SYSTEM_INSTRUCTION = `你是一位专业的调查助手，正在协助侦探破解一起复杂的推理案件。
 
 重要准则：
-1. 你的名字叫“助手”。
-2. 语言风格：专业、直接、高效，带有1940年代黑色电影的冷峻感。必须使用中文交流。
-3. 当侦探要求调查某处，或对话中出现关键突破时，你必须提供新的线索（Clue）。
-4. 你的所有回复必须是严格的 JSON 格式。
-5. 视觉线索（type: 'image'）：提供简洁的英文描述作为 'contentPrompt'。
-6. 文字线索（type: 'text'）：提供具体的公文、书信或证词内容。
-7. 引导用户：通过线索和暗示引导用户推理，不要直接揭晓真相。
+1. 语言风格：专业、高效，带有1940年代黑色电影感。必须使用中文交流。
+2. 回复必须是严格的 JSON 格式。
+3. 线索生成：只有在发现关键点时才添加 'newClues'。
 
 回复模式（JSON）：
 {
-  "message": "对侦探的回复内容。",
-  "newClues": [
-    {
-      "title": "线索标题",
-      "description": "说明该线索的重要性",
-      "type": "text" | "image" | "map",
-      "contentPrompt": "如果类型是 image/map，提供英文绘画提示词",
-      "contentText": "如果类型是 text，提供具体的文字内容"
-    }
-  ]
-}
-
-只有在发现具体突破时才添加 'newClues'。`;
+  "message": "回复内容",
+  "newClues": []
+}`;
 
 export const getDetectiveResponse = async (
   history: { role: 'user' | 'model', parts: { text: string }[] }[],
   currentMessage: string,
   caseContext: string
 ): Promise<AgentResponse> => {
+  const apiKey = process.env.API_KEY;
+
+  if (!apiKey || apiKey === "undefined") {
+    return { message: "错误：未检测到 API 密钥。请在 Vercel 设置中配置 API_KEY 并重新部署项目。" };
+  }
+
   try {
-    // 每次请求动态初始化，确保获取最新的环境变量
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3-flash-preview', // 推荐的免费层级高性能模型
       contents: [
         ...history, 
         { role: 'user', parts: [{ text: `案件背景: ${caseContext}\n\n侦探指令: ${currentMessage}` }] }
@@ -71,23 +62,28 @@ export const getDetectiveResponse = async (
     });
 
     const text = response.text;
-    if (!text) throw new Error("Gemini 返回为空");
+    if (!text) throw new Error("API 返回内容为空");
     return JSON.parse(text);
   } catch (error: any) {
-    console.error("Gemini 对话失败:", error);
-    return { 
-      message: "抱歉，侦探。由于通讯线路繁忙或 API 密钥问题，助手暂时无法回应。请检查环境变量配置或稍后再试。" 
-    };
+    console.error("Gemini 详情错误:", error);
+    // 检查是否是频率限制（免费账号常见）
+    if (error.message?.includes('429')) {
+      return { message: "侦探，由于免费 API 的频率限制，助手暂时有些忙。请等待一分钟后再次尝试。" };
+    }
+    return { message: "抱歉，侦探。通讯器出现了技术故障。请检查网络或确认 API 密钥是否有效。" };
   }
 };
 
 export const generateClueVisual = async (prompt: string): Promise<string | null> => {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey || apiKey === "undefined") return null;
+
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image',
+      model: 'gemini-2.5-flash-image', // 免费层级可用的图像生成模型
       contents: {
-        parts: [{ text: `Professional forensic photo: ${prompt}. Noir aesthetic, high contrast, detailed, 1940s style.` }]
+        parts: [{ text: `A 1940s noir forensic photo: ${prompt}. Grayscale, grainy, high contrast.` }]
       },
       config: {
         imageConfig: { aspectRatio: "1:1" }
@@ -101,7 +97,7 @@ export const generateClueVisual = async (prompt: string): Promise<string | null>
     }
     return null;
   } catch (error) {
-    console.error("证据生成失败:", error);
+    console.error("生成图像失败:", error);
     return null;
   }
 };
